@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support CRM</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f4f6f8;
+        }
+
+        header {
+            background: #1f2937;
+            color: white;
+            padding: 20px 30px;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .top-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input, select, button {
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        input {
+            flex: 1;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .cards {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            flex: 1;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+
+        .card h3 {
+            margin-top: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+
+        th, td {
+            padding: 14px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+
+        th {
+            background: #f9fafb;
+        }
+
+        .status {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.open {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.progress {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.closed {
+    color: #166534;
+    background: #dcfce7;
+}
+
+        @media (max-width: 700px) {
+            .cards {
+                flex-direction: column;
+            }
+
+            .top-bar {
+                flex-direction: column;
+            }
+
+            table {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Support CRM</h1>
+</header>
+
+<div class="container">
+
+    <div class="cards">
+        <div class="card">
+            <h3>Total Tickets</h3>
+            <p id="totalTickets">0</p>
+        </div>
+
+        <div class="card">
+            <h3>Open</h3>
+            <p id="openTickets">0</p>
+        </div>
+
+        <div class="card">
+            <h3>In Progress</h3>
+            <p id="progressTickets">0</p>
+        </div>
+
+        <div class="card">
+            <h3>Closed</h3>
+            <p id="closedTickets">0</p>
+        </div>
+    </div>
+
+    <div class="top-bar">
+        <div style="margin-bottom: 15px;">
+    <a href="/create-ticket">
+        <button>Create New Ticket</button>
+    </a>
+</div>
+        <input
+    type="text"
+    id="searchInput"
+    placeholder="Search tickets..."
+    oninput="loadTickets()"
+>
+
+        <select id="statusFilter">
+            <option value="">All Status</option>
+            <option value="Open">Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Closed">Closed</option>
+        </select>
+
+        <button onclick="loadTickets()">Search</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Ticket ID</th>
+                <th>Customer</th>
+                <th>Subject</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+
+        <tbody id="ticketTable">
+        </tbody>
+    </table>
+
+</div>
+
+<script>
+
+async function loadTickets() {
+
+    const search = document.getElementById("searchInput").value;
+    const status = document.getElementById("statusFilter").value;
+
+    let url = "/api/tickets?";
+
+    if (search) {
+        url += `search=${encodeURIComponent(search)}&`;
+    }
+
+    if (status) {
+        url += `status=${encodeURIComponent(status)}`;
+    }
+
+    const response = await fetch(url);
+    const tickets = await response.json();
+
+    const table = document.getElementById("ticketTable");
+
+    table.innerHTML = "";
+
+    let open = 0;
+    let progress = 0;
+    let closed = 0;
+
+    tickets.forEach(ticket => {
+
+        if (ticket.status === "Open") {
+            open++;
+        }
+
+        if (ticket.status === "In Progress") {
+            progress++;
+        }
+
+        if (ticket.status === "Closed") {
+            closed++;
+        }
+
+        let statusClass = "";
+
+        if (ticket.status === "Open") {
+            statusClass = "open";
+        } else if (ticket.status === "In Progress") {
+            statusClass = "progress";
+        } else if (ticket.status === "Closed") {
+            statusClass = "closed";
+        }
+
+        const row = `
+            <tr>
+                <td>
+    <a href="/ticket/${ticket.ticket_id}">
+        ${ticket.ticket_id}
+    </a>
+</td>
+                <td>${ticket.customer_name}</td>
+                <td>${ticket.subject}</td>
+                <td class="status ${statusClass}">
+                    ${ticket.status}
+                </td>
+                <td>
+                    ${new Date(ticket.created_at).toLocaleString()}
+                </td>
+            </tr>
+        `;
+
+        table.innerHTML += row;
+    });
+
+    document.getElementById("totalTickets").innerText = tickets.length;
+    document.getElementById("openTickets").innerText = open;
+    document.getElementById("progressTickets").innerText = progress;
+    document.getElementById("closedTickets").innerText = closed;
+}
+
+loadTickets();
+
+</script>
+
+</body>
+</html>

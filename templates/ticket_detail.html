@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Ticket Details - Support CRM</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+        }
+
+        header {
+            background: #1f2937;
+            color: white;
+            padding: 20px 30px;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        .label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        .value {
+            font-size: 16px;
+        }
+
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 12px 20px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .note {
+            padding: 12px;
+            background: #f9fafb;
+            border-left: 4px solid #2563eb;
+            margin-bottom: 10px;
+        }
+
+        #message {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Support CRM</h1>
+</header>
+
+<div class="container">
+
+    <a href="/" class="back">← Back to Dashboard</a>
+
+    <div class="card">
+
+        <h2 id="ticketTitle">Ticket Details</h2>
+
+        <div class="field">
+            <div class="label">Ticket ID</div>
+            <div class="value" id="ticketId"></div>
+        </div>
+
+        <div class="field">
+            <div class="label">Customer Name</div>
+            <div class="value" id="customerName"></div>
+        </div>
+
+        <div class="field">
+            <div class="label">Customer Email</div>
+            <div class="value" id="customerEmail"></div>
+        </div>
+
+        <div class="field">
+            <div class="label">Issue Title</div>
+            <div class="value" id="subject"></div>
+        </div>
+
+        <div class="field">
+            <div class="label">Description</div>
+            <div class="value" id="description"></div>
+        </div>
+
+        <div class="field">
+            <div class="label">Created At</div>
+            <div class="value" id="createdAt"></div>
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Update Ticket</h2>
+
+        <div class="field">
+            <div class="label">Status</div>
+
+            <select id="status">
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Closed">Closed</option>
+            </select>
+        </div>
+
+        <div class="field">
+            <div class="label">Add Note / Comment</div>
+
+            <textarea
+                id="notes"
+                placeholder="Enter your note..."
+            ></textarea>
+        </div>
+
+        <button onclick="updateTicket()">
+            Update Ticket
+        </button>
+
+        <div id="message"></div>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Notes / Comments</h2>
+
+        <div id="notesList">
+            No notes yet.
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const ticketId = "{{ ticket_id }}";
+
+
+async function loadTicket() {
+
+    const response = await fetch(`/api/tickets/${ticketId}`);
+
+    if (!response.ok) {
+        document.getElementById("ticketTitle").innerText =
+            "Ticket not found";
+        return;
+    }
+
+    const ticket = await response.json();
+
+    document.getElementById("ticketId").innerText =
+        ticket.ticket_id;
+
+    document.getElementById("customerName").innerText =
+        ticket.customer_name;
+
+    document.getElementById("customerEmail").innerText =
+        ticket.customer_email;
+
+    document.getElementById("subject").innerText =
+        ticket.subject;
+
+    document.getElementById("description").innerText =
+        ticket.description;
+
+    document.getElementById("createdAt").innerText =
+        new Date(ticket.created_at).toLocaleString();
+
+    document.getElementById("status").value =
+        ticket.status;
+
+    const notesList =
+        document.getElementById("notesList");
+
+    if (ticket.notes.length === 0) {
+
+        notesList.innerHTML = "No notes yet.";
+
+    } else {
+
+        notesList.innerHTML = "";
+
+        ticket.notes.forEach(note => {
+
+            const noteDiv = document.createElement("div");
+
+            noteDiv.className = "note";
+
+            noteDiv.innerHTML = `
+                <div>${note.note_text}</div>
+                <small>
+                    ${new Date(note.created_at).toLocaleString()}
+                </small>
+            `;
+
+            notesList.appendChild(noteDiv);
+        });
+    }
+}
+
+
+async function updateTicket() {
+
+    const status =
+        document.getElementById("status").value;
+
+    const notes =
+        document.getElementById("notes").value;
+
+    const response = await fetch(
+        `/api/tickets/${ticketId}`,
+        {
+            method: "PUT",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                status: status,
+                notes: notes
+            })
+        }
+    );
+
+    const result = await response.json();
+
+    if (response.ok) {
+
+        document.getElementById("message").innerText =
+            "Ticket updated successfully.";
+
+        document.getElementById("notes").value = "";
+
+        loadTicket();
+
+    } else {
+
+        document.getElementById("message").innerText =
+            result.detail || "Error updating ticket.";
+
+    }
+}
+
+
+loadTicket();
+
+</script>
+
+</body>
+</html>
